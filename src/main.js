@@ -195,22 +195,33 @@ function rebuild() {
     group.add(joist);
   }
 
-  // Construction posts for the 4-step staircase, climbing across Z within the
-  // carved-out middle span, resting on the edge and centre joists. The tread boards
-  // themselves are being reworked next — for now this is just the post structure.
+  // Fixed 4-step staircase, climbing across Z within the carved-out middle span. Each
+  // tread now runs in the walking direction (Z) instead of across it — it's as deep as
+  // the actual step run (zStep), not just a thin cross-section board — so it needs
+  // support at both ends: the trailing edge (where you land after the riser) and the
+  // leading edge (where the next riser starts), each with their own posts.
   const joistTopY = fh + jh;
   const zStep = (spacing - jw) / (STAIR_STEPS - 1);
   const riser = totalHeight / (STAIR_STEPS - 1); // 3 risers across 4 steps: first is flush, last reaches totalHeight
   for (let i = 0; i < STAIR_STEPS; i++) {
-    const z = -spacing / 2 + jw / 2 + i * zStep;
+    const zTrailing = -spacing / 2 + jw / 2 + i * zStep;
+    const zLeading = zTrailing + zStep; // the end pointing in the walking direction
     const stepBottomY = joistTopY + i * riser; // i = 0 sits flush on the joist top
+
+    const tread = makeBox(stairHalfWidth * 2, jh, zStep, stairMaterial);
+    tread.position.set(0, stepBottomY + jh / 2, zTrailing + zStep / 2);
+    group.add(tread);
 
     const postHeight = stepBottomY - joistTopY;
     if (postHeight > 1) {
       for (const x of [-stairHalfWidth, 0, stairHalfWidth]) {
-        const post = makeBox(postSize, postHeight, postSize, postMaterial);
-        post.position.set(x, joistTopY + postHeight / 2, z);
-        group.add(post);
+        const trailingPost = makeBox(postSize, postHeight, postSize, postMaterial);
+        trailingPost.position.set(x, joistTopY + postHeight / 2, zTrailing);
+        group.add(trailingPost);
+
+        const leadingPost = makeBox(postSize, postHeight, postSize, postMaterial);
+        leadingPost.position.set(x, joistTopY + postHeight / 2, zLeading);
+        group.add(leadingPost);
       }
     }
   }
