@@ -21,6 +21,11 @@ const params = {
     height: 4, // cross-section height, cm (40mm)
     length: 5000, // beam length, mm
   },
+  joists: {
+    count: 5, // number of crossing beams, evenly spaced along the foundation length
+    width: 4, // cross-section width (along the foundation length), cm
+    height: 9, // cross-section height, cm
+  },
   view: {
     grid: true,
     labels: true,
@@ -75,6 +80,7 @@ const group = new THREE.Group();
 scene.add(group);
 
 const foundationMaterial = new THREE.MeshStandardMaterial({ color: 0xb08a5c, roughness: 0.8, metalness: 0.0 });
+const joistMaterial = new THREE.MeshStandardMaterial({ color: 0xd9b789, roughness: 0.8, metalness: 0.0 });
 const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x0a0d10 });
 const dimensionMaterial = new THREE.LineDashedMaterial({ color: 0xf5c451, dashSize: 20, gapSize: 12 });
 
@@ -131,6 +137,21 @@ function rebuild() {
   dimLine.computeLineDistances();
   group.add(dimLine);
 
+  // Joists: crossing beams running perpendicular (along Z), evenly spaced along the
+  // foundation length (X) and resting flush on top of the foundation beams (y = fh).
+  const jw = params.joists.width * 10;
+  const jh = params.joists.height * 10;
+  const jCount = Math.max(1, Math.round(params.joists.count));
+  const joistSpan = spacing + fw; // reaches the outer edge of both foundation beams
+  const joistStep = jCount > 1 ? fl / (jCount - 1) : 0;
+
+  for (let i = 0; i < jCount; i++) {
+    const x = jCount === 1 ? 0 : -fl / 2 + i * joistStep;
+    const joist = makeBox(jw, jh, joistSpan, joistMaterial);
+    joist.position.set(x, fh + jh / 2, 0);
+    group.add(joist);
+  }
+
   if (params.view.labels) {
     const spacingLabel = makeLabel(`spacing ${fmt(spacing)}`);
     spacingLabel.position.set(0, fh + 20, 0);
@@ -139,6 +160,14 @@ function rebuild() {
     const lengthLabel = makeLabel(`foundation ${fmt(fl)} (${params.foundation.width}×${params.foundation.height} cm) ×2`);
     lengthLabel.position.set(0, fh + 14, -spacing / 2 - fw / 2 - 6);
     group.add(lengthLabel);
+
+    const joistText =
+      jCount > 1
+        ? `${jCount} joists (${params.joists.width}×${params.joists.height} cm), ${fmt(joistStep)} apart`
+        : `${jCount} joist (${params.joists.width}×${params.joists.height} cm)`;
+    const joistLabel = makeLabel(joistText);
+    joistLabel.position.set(0, fh + jh + 10, spacing / 2 + fw / 2 + 6);
+    group.add(joistLabel);
   }
 
   if (params.view.grid) {
@@ -185,6 +214,11 @@ const foundationFolder = gui.addFolder("Foundation (beams)");
 foundationFolder.add(params.foundation, "width", 1, 40, 1).name("width (cm)").onChange(rebuild);
 foundationFolder.add(params.foundation, "height", 1, 40, 1).name("height (cm)").onChange(rebuild);
 foundationFolder.add(params.foundation, "length", 100, 20000, 10).name("length (mm)").onChange(rebuild);
+
+const joistsFolder = gui.addFolder("Joists (crossing beams)");
+joistsFolder.add(params.joists, "count", 1, 40, 1).name("count").onChange(rebuild);
+joistsFolder.add(params.joists, "width", 1, 20, 1).name("width (cm)").onChange(rebuild);
+joistsFolder.add(params.joists, "height", 1, 30, 1).name("height (cm)").onChange(rebuild);
 
 const viewFolder = gui.addFolder("View");
 viewFolder.add(params.view, "grid").name("show grid").onChange(rebuild);

@@ -8,6 +8,10 @@ in the on-screen panel.
 
 - Two parallel foundation beams (default a 120×40mm bearer, 5m long),
   spaced apart (default 100cm centre-to-centre) and centred on the origin.
+- A layer of joists (crossing beams) on top, running perpendicular to the
+  foundation beams and evenly spaced along their length. The joist count is
+  a parameter; they always sit flush on top of the foundation beams and
+  span the full width between their outer edges.
 - Live dimension labels and a dashed spacing line showing computed distances.
 - A ground grid for scale reference.
 
