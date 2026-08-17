@@ -1,0 +1,89 @@
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #14181d;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+#app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+}
+
+#scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+#hint {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  color: #8a94a3;
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  background: rgba(20, 24, 29, 0.55);
+  padding: 4px 8px;
+  border-radius: 6px;
+  pointer-events: none;
+  user-select: none;
+}
+
+#hint kbd {
+  background: #2a3038;
+  border-radius: 3px;
+  padding: 0 4px;
+  font-family: inherit;
+}
+
+.dim-label {
+  color: #f5c451;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 2px 6px;
+  background: rgba(20, 24, 29, 0.75);
+  border-radius: 4px;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  transform: translate(-50%, -100%);
+}
+
+/* lil-gui panel toggle button */
+#panel-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 10;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid #3a4048;
+  background: #1f242b;
+  color: #e8ebef;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+#panel-toggle:hover {
+  background: #2a3038;
+}
+
+.lil-gui.root {
+  top: 54px !important;
+  right: 10px !important;
+}
