@@ -13,29 +13,31 @@ import "./style.css";
  * every location and distance in the scene.
  */
 /*
- * The two foundation beams are already installed in the ground — they're the
- * footing for this structure (not a deck), so they stay at ground level. On
- * top of them, evenly spaced along X, are the joists — and the joists are
- * what climbs: each one sits one riser higher than the last, all the way from
- * the ground to totalHeight. The first two and last two joists are wide
- * enough to sit on (seating); the joists in between form the actual
- * staircase. Every joist spans across (Z) from one foundation beam to the
- * other, held up by a construction post at each end.
+ * A short, wide staircase. The two foundation beams are already installed in
+ * the ground — they run along X (the wide dimension) and stay at ground
+ * level, spaced apart along Z by `layout.spacing` — that short Z gap is the
+ * climbing run. Joists stay perpendicular to the beams (spanning Z, as any
+ * joist should), but instead of one long single-file flight, the wide X
+ * dimension is split into three side-by-side sections — seating, stairs,
+ * seating — each independently climbing across the same short Z gap, from
+ * the ground up to the same totalHeight. Every joist is held up by a
+ * construction post at each end.
  */
 const params = {
   layout: {
-    spacing: 1000, // centre-to-centre distance between the two foundation beams, mm (100cm) — also the joist span
+    spacing: 1000, // the short climbing run: centre-to-centre distance between the two foundation beams, mm
   },
   foundation: {
     width: 4, // cross-section width, cm (40mm)
     height: 12, // cross-section height, cm (120mm)
-    length: 5000, // beam length, mm
+    length: 5000, // beam length, mm — the wide dimension, shared by all three sections
   },
   joists: {
-    count: 9, // total joists, evenly spaced along the foundation length (min 5: 2 seating + 1+ stairs + 2 seating)
-    width: 4, // cross-section width (along X), cm
+    stairCount: 5, // number of stair steps in the middle section
+    stairWidth: 1200, // width (along X) of the middle stair section, mm
+    width: 4, // cross-section thickness along the climb (Z), cm
     height: 9, // cross-section height, cm
-    totalHeight: 900, // total rise from the ground to the last joist, mm
+    totalHeight: 900, // total rise from the ground to the last step, mm — shared by every section
   },
   posts: {
     size: 9, // square construction-post cross-section, cm — one under each end of every joist
@@ -155,45 +157,53 @@ function rebuild() {
   dimLine.computeLineDistances();
   group.add(dimLine);
 
-  // Joists: evenly spaced along X (edge-aligned with the foundation ends), each one
-  // spanning across (Z) from one foundation beam to the other. These are what climbs:
-  // joist i sits one riser higher than joist i-1, all the way from the ground to
-  // totalHeight. The first two and last two are wide sitting platforms (seating); the
-  // joists in between are the actual staircase.
+  // Three sections side by side along X (the wide dimension): seating, stairs, seating.
+  // Each one independently climbs across Z (the short run between the two beams), with
+  // its own joists spanning its own width — joists stay perpendicular to the beams, as
+  // they should. Edge steps in each section sit flush with the beams' Z positions.
   const jw = params.joists.width * 10;
   const jh = params.joists.height * 10;
-  const jCount = Math.max(5, Math.round(params.joists.count));
+  const stairCount = Math.max(1, Math.round(params.joists.stairCount));
   const totalHeight = params.joists.totalHeight;
-  const joistSpan = spacing + fw; // reaches the outer edge of both foundation beams
-  const joistStep = (fl - jw) / (jCount - 1);
-  const riser = totalHeight / jCount;
   const postSize = params.posts.size * 10;
-  const isSeat = (i) => i < 2 || i >= jCount - 2; // the two flanking joists at each end
 
-  const joistX = []; // centre X of every joist, in build order
-  for (let i = 0; i < jCount; i++) {
-    const x = -fl / 2 + jw / 2 + i * joistStep;
-    joistX.push(x);
-    const joistY = (i + 1) * riser; // riser 1 at the first joist, up to totalHeight at the last
+  const outerX = fl / 2;
+  const stairHalfWidth = Math.min(params.joists.stairWidth / 2, outerX - 100); // keep both seat sections positive-width
+  const sections = [
+    { label: "seating", count: 2, xFrom: -outerX, xTo: -stairHalfWidth, material: seatMaterial },
+    { label: "stairs", count: stairCount, xFrom: -stairHalfWidth, xTo: stairHalfWidth, material: stairMaterial },
+    { label: "seating", count: 2, xFrom: stairHalfWidth, xTo: outerX, material: seatMaterial },
+  ];
 
-    const joist = makeBox(jw, jh, joistSpan, isSeat(i) ? seatMaterial : stairMaterial);
-    joist.position.set(x, joistY + jh / 2, 0);
-    group.add(joist);
+  for (const section of sections) {
+    const xSpan = section.xTo - section.xFrom;
+    const xCenter = (section.xFrom + section.xTo) / 2;
+    const zStep = section.count > 1 ? (spacing - jw) / (section.count - 1) : 0;
+    const riser = totalHeight / section.count;
 
-    // Construction post at each end, carrying this joist's load down to the foundation top.
-    const postHeight = joistY - fh;
-    if (postHeight > 1) {
-      for (const z of [-spacing / 2, spacing / 2]) {
-        const post = makeBox(postSize, postHeight, postSize, postMaterial);
-        post.position.set(x, fh + postHeight / 2, z);
-        group.add(post);
+    for (let i = 0; i < section.count; i++) {
+      const z = section.count === 1 ? 0 : -spacing / 2 + jw / 2 + i * zStep;
+      const stepY = (i + 1) * riser; // riser 1 at the first step, up to totalHeight at the last
+
+      const joist = makeBox(xSpan, jh, jw, section.material);
+      joist.position.set(xCenter, stepY + jh / 2, z);
+      group.add(joist);
+
+      // Construction post at each end of this section, carrying the step's load to the foundation top.
+      const postHeight = stepY - fh;
+      if (postHeight > 1) {
+        for (const x of [section.xFrom, section.xTo]) {
+          const post = makeBox(postSize, postHeight, postSize, postMaterial);
+          post.position.set(x, fh + postHeight / 2, z);
+          group.add(post);
+        }
       }
     }
+    section.riser = riser;
   }
-  const runLength = fl; // joists are edge-aligned, so the flight runs the full foundation length
 
   if (params.view.labels) {
-    const spacingLabel = makeLabel(`spacing ${fmt(spacing)}`);
+    const spacingLabel = makeLabel(`run (spacing) ${fmt(spacing)}`);
     spacingLabel.position.set(0, fh + 20, 0);
     group.add(spacingLabel);
 
@@ -201,34 +211,22 @@ function rebuild() {
     lengthLabel.position.set(0, fh + 14, -spacing / 2 - fw / 2 - 6);
     group.add(lengthLabel);
 
-    const stairCount = jCount - 4;
-    const stairFrom = joistX[2];
-    const stairTo = joistX[jCount - 3];
+    const stairSection = sections[1];
     const stairLabel = makeLabel(
-      `stairs: ${stairCount} joists, ${fmt(riser)} rise each, ${fmt(joistStep)} apart, ${fmt(totalHeight)} total`
+      `stairs: ${stairCount} steps, ${fmt(stairSection.riser)} rise each, ${fmt(stairHalfWidth * 2)} wide`
     );
-    stairLabel.position.set((stairFrom + stairTo) / 2, totalHeight + 30, spacing / 2 + fw / 2 + 6);
+    stairLabel.position.set(0, totalHeight + 30, spacing / 2 + fw / 2 + 6);
     group.add(stairLabel);
 
-    const seatNearFrom = joistX[0];
-    const seatNearTo = joistX[1];
-    const seatNearLabel = makeLabel(`seating (2 joists)`);
-    seatNearLabel.position.set((seatNearFrom + seatNearTo) / 2, riser * 2 + 20, spacing / 2 + fw / 2 + 6);
-    group.add(seatNearLabel);
-
-    const seatFarFrom = joistX[jCount - 2];
-    const seatFarTo = joistX[jCount - 1];
-    const seatFarLabel = makeLabel(`seating (2 joists)`);
-    seatFarLabel.position.set((seatFarFrom + seatFarTo) / 2, totalHeight + 30, spacing / 2 + fw / 2 + 6);
-    group.add(seatFarLabel);
-
-    const runLabel = makeLabel(`run ${fmt(runLength)}`);
-    runLabel.position.set(fl / 2 - runLength / 2, 6, -spacing / 2 - fw / 2 - 30);
-    group.add(runLabel);
+    for (const section of [sections[0], sections[2]]) {
+      const seatLabel = makeLabel(`seating: 2 steps, ${fmt(section.riser)} rise each`);
+      seatLabel.position.set((section.xFrom + section.xTo) / 2, totalHeight + 30, spacing / 2 + fw / 2 + 6);
+      group.add(seatLabel);
+    }
   }
 
   if (params.view.grid) {
-    const gridSize = Math.max(fl * 1.4, spacing * 4, runLength * 2, 1000);
+    const gridSize = Math.max(fl * 1.4, spacing * 4, 1000);
     grid = new THREE.GridHelper(gridSize, Math.round(gridSize / 50), 0x30363f, 0x22262c);
     scene.add(grid);
   }
@@ -273,9 +271,10 @@ foundationFolder.add(params.foundation, "height", 1, 40, 1).name("height (cm)").
 foundationFolder.add(params.foundation, "length", 100, 20000, 10).name("length (mm)").onChange(rebuild);
 
 const joistsFolder = gui.addFolder("Joists (climbing)");
-joistsFolder.add(params.joists, "count", 5, 40, 1).name("count").onChange(rebuild);
+joistsFolder.add(params.joists, "stairCount", 1, 20, 1).name("stair steps (middle)").onChange(rebuild);
+joistsFolder.add(params.joists, "stairWidth", 200, 10000, 10).name("stair width (mm)").onChange(rebuild);
 joistsFolder.add(params.joists, "totalHeight", 100, 3000, 10).name("total height (mm)").onChange(rebuild);
-joistsFolder.add(params.joists, "width", 1, 20, 1).name("width (cm)").onChange(rebuild);
+joistsFolder.add(params.joists, "width", 1, 20, 1).name("thickness (cm)").onChange(rebuild);
 joistsFolder.add(params.joists, "height", 1, 30, 1).name("height (cm)").onChange(rebuild);
 
 const postsFolder = gui.addFolder("Posts");
