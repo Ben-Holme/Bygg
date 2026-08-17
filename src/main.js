@@ -214,9 +214,13 @@ function rebuild() {
     for (let idx = leftEdgeIndex; idx <= rightEdgeIndex; idx++) {
       const x = joistX[idx];
 
-      const beam = makeBox(jw, jh, zStep, stairMaterial);
-      beam.position.set(x, stepBottomY + jh / 2, zTrailing + zStep / 2);
-      group.add(beam);
+      // Step 0 sits flush on the joist top, so its beam would just duplicate the
+      // flush joist already there — skip it.
+      if (i > 0) {
+        const beam = makeBox(jw, jh, zStep, stairMaterial);
+        beam.position.set(x, stepBottomY + jh / 2, zTrailing + zStep / 2);
+        group.add(beam);
+      }
 
       if (postHeight > 1) {
         const trailingPost = makeBox(postSize, postHeight, postSize, postMaterial);
