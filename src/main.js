@@ -208,7 +208,8 @@ function rebuild() {
   for (let i = 0; i < STAIR_STEPS; i++) {
     const zTrailing = -spacing / 2 + jw / 2 + i * zStep;
     const zLeading = zTrailing + zStep; // the end pointing in the walking direction
-    const stepBottomY = joistTopY + i * riser; // i = 0 sits flush on the joist top
+    const stepTopY = joistTopY + i * riser; // walking-surface height for step i (i = 0 is the joist's own top)
+    const stepBottomY = i === 0 ? joistTopY : stepTopY - jh; // beam sized so its top lands exactly on stepTopY
     const postHeight = stepBottomY - joistTopY;
 
     for (let idx = leftEdgeIndex; idx <= rightEdgeIndex; idx++) {
