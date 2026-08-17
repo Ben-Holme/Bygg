@@ -183,11 +183,12 @@ function rebuild() {
   const rightEdgeIndex = midIndex + removedPerSide;
   const stairHalfWidth = joistX[rightEdgeIndex]; // = -joistX[leftEdgeIndex] by symmetry
 
-  // Flush bottom joists (seating): everything outside the stair span, plus the centre
-  // joist (kept as the stair's middle support even though it sits under the treads).
+  // Flush bottom joists (seating): everything outside the stair span. Every joist
+  // inside the span — including the centre one — is now part of the climbing
+  // staircase instead, so none of them stay flush.
   let seatJoistCount = 0;
   for (let i = 0; i < jCount; i++) {
-    const inStairSpan = i > leftEdgeIndex && i < rightEdgeIndex && i !== midIndex;
+    const inStairSpan = i >= leftEdgeIndex && i <= rightEdgeIndex;
     if (inStairSpan) continue;
     seatJoistCount++;
     const joist = makeBox(jw, jh, spacing + fw, seatMaterial);
@@ -195,11 +196,13 @@ function rebuild() {
     group.add(joist);
   }
 
-  // Fixed 4-step staircase, climbing across Z within the carved-out middle span. Each
-  // tread now runs in the walking direction (Z) instead of across it — it's as deep as
-  // the actual step run (zStep), not just a thin cross-section board — so it needs
-  // support at both ends: the trailing edge (where you land after the riser) and the
-  // leading edge (where the next riser starts), each with their own posts.
+  // Fixed 4-step staircase, climbing across Z within the carved-out middle span. The
+  // pattern repeats above every joist in the span (not just the two edges and centre):
+  // each one gets its own beam running in the walking direction (Z), as deep as the
+  // actual step run (zStep) — a beam, not one wide flat board — held up by a post at
+  // its trailing edge (where you land after the riser) and another at its leading edge
+  // (where the next riser starts). The leading post is set back half a post-width so it
+  // sits right next to next step's trailing post instead of overlapping it.
   const joistTopY = fh + jh;
   const zStep = (spacing - jw) / (STAIR_STEPS - 1);
   const riser = totalHeight / (STAIR_STEPS - 1); // 3 risers across 4 steps: first is flush, last reaches totalHeight
@@ -207,20 +210,22 @@ function rebuild() {
     const zTrailing = -spacing / 2 + jw / 2 + i * zStep;
     const zLeading = zTrailing + zStep; // the end pointing in the walking direction
     const stepBottomY = joistTopY + i * riser; // i = 0 sits flush on the joist top
-
-    const tread = makeBox(stairHalfWidth * 2, jh, zStep, stairMaterial);
-    tread.position.set(0, stepBottomY + jh / 2, zTrailing + zStep / 2);
-    group.add(tread);
-
     const postHeight = stepBottomY - joistTopY;
-    if (postHeight > 1) {
-      for (const x of [-stairHalfWidth, 0, stairHalfWidth]) {
+
+    for (let idx = leftEdgeIndex; idx <= rightEdgeIndex; idx++) {
+      const x = joistX[idx];
+
+      const beam = makeBox(jw, jh, zStep, stairMaterial);
+      beam.position.set(x, stepBottomY + jh / 2, zTrailing + zStep / 2);
+      group.add(beam);
+
+      if (postHeight > 1) {
         const trailingPost = makeBox(postSize, postHeight, postSize, postMaterial);
         trailingPost.position.set(x, joistTopY + postHeight / 2, zTrailing);
         group.add(trailingPost);
 
         const leadingPost = makeBox(postSize, postHeight, postSize, postMaterial);
-        leadingPost.position.set(x, joistTopY + postHeight / 2, zLeading);
+        leadingPost.position.set(x, joistTopY + postHeight / 2, zLeading - postSize);
         group.add(leadingPost);
       }
     }
