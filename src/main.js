@@ -190,7 +190,7 @@ function rebuild() {
   for (let i = 0; i < jCount; i++) {
     const inStairSpan = i >= leftEdgeIndex && i <= rightEdgeIndex;
     if (!inStairSpan) seatJoistCount++;
-    const joist = makeBox(jw, jh, spacing + fw, inStairSpan ? stairMaterial : seatMaterial);
+    const joist = makeBox(jw, jh, spacing + fw, seatMaterial);
     joist.position.set(joistX[i], fh + jh / 2, 0);
     group.add(joist);
   }
