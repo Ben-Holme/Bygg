@@ -195,15 +195,25 @@ function rebuild() {
     group.add(joist);
   }
 
-  // Construction posts for the 4-step staircase, climbing across Z within the
-  // carved-out middle span, resting on the edge and centre joists. The tread boards
-  // themselves are being reworked next — for now this is just the post structure.
+  // Fixed 4-step staircase, climbing across Z within the carved-out middle span. Each
+  // tread is two beams (left-post-to-centre-post, centre-post-to-right-post) instead of
+  // one continuous wide board, so no single board has to span the whole width unsupported.
   const joistTopY = fh + jh;
   const zStep = (spacing - jw) / (STAIR_STEPS - 1);
   const riser = totalHeight / (STAIR_STEPS - 1); // 3 risers across 4 steps: first is flush, last reaches totalHeight
   for (let i = 0; i < STAIR_STEPS; i++) {
     const z = -spacing / 2 + jw / 2 + i * zStep;
     const stepBottomY = joistTopY + i * riser; // i = 0 sits flush on the joist top
+
+    for (const half of [
+      [-stairHalfWidth, 0],
+      [0, stairHalfWidth],
+    ]) {
+      const halfSpan = half[1] - half[0];
+      const tread = makeBox(halfSpan, jh, jw, stairMaterial);
+      tread.position.set((half[0] + half[1]) / 2, stepBottomY + jh / 2, z);
+      group.add(tread);
+    }
 
     const postHeight = stepBottomY - joistTopY;
     if (postHeight > 1) {
