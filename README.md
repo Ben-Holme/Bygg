@@ -11,17 +11,13 @@ A parametric staircase, built on its own foundation:
 - Two parallel foundation beams (default a 4×12cm bearer, 5m long), already
   installed flat at ground level, spaced apart (default 100cm centre-to-centre)
   and centred on the origin — these are the footing for the stair, not a deck.
-- A flush joist layer resting flat on top of the foundation beams, evenly
-  spaced along their length (count is a parameter) — these don't climb, they're
-  a separate, level layer from the steps below.
-- One continuous rising structure climbing along the beams' length, sharing
-  uniform risers throughout, but split into two different things: a real
-  staircase in the middle (small-tread steps, count is a parameter) for
-  walking, flanked by two wide sitting platforms (2 large-tread steps each
-  side) — not a walking flight, just deep enough to sit on. Total rise is
-  a parameter.
-- A construction post at each end of every step, automatically sized to
-  carry that step's load straight down to the foundation beam beneath it.
+- Joists on top of the beams, evenly spaced along their length (count is a
+  parameter) — and the joists are what climbs: each one sits one riser higher
+  than the last, all the way from the ground to a total height (parameter).
+  The first two and last two joists are wide sitting platforms (seating);
+  the joists in between form the actual staircase.
+- A construction post at each end of every joist, automatically sized to
+  carry its load straight down to the foundation beam beneath it.
 - Live dimension labels showing computed spacing, rise, and run.
 - A ground grid for scale reference.
 
