@@ -205,14 +205,11 @@ function rebuild() {
   const joistTopY = fh + jh;
   // zStep tiles the run into STAIR_STEPS equal tread depths (so the last tread's
   // leading edge lands exactly at the far beam, not one zStep past it); riser divides
-  // the STAIR_STEPS-1 gaps between the 4 walking-surface heights (joist, 1, 2, 3). The
-  // run is shrunk by one post-width and the start shifted forward by half a post-width,
-  // so the beams' own post-width extensions land exactly on the two beams' centrelines
-  // instead of overshooting past them.
-  const zStep = (spacing - jw - postSize) / STAIR_STEPS;
+  // the STAIR_STEPS-1 gaps between the 4 walking-surface heights (joist, 1, 2, 3).
+  const zStep = (spacing - jw) / STAIR_STEPS;
   const riser = totalHeight / (STAIR_STEPS - 1);
   for (let i = 0; i < STAIR_STEPS; i++) {
-    const zTrailing = -spacing / 2 + jw / 2 + postSize / 2 + i * zStep;
+    const zTrailing = -spacing / 2 + jw / 2 + i * zStep;
     const zLeading = zTrailing + zStep; // the end pointing in the walking direction
     const stepTopY = joistTopY + i * riser; // walking-surface height for step i (i = 0 is the joist's own top)
     const stepBottomY = i === 0 ? joistTopY : stepTopY - jh; // beam sized so its top lands exactly on stepTopY
