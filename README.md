@@ -11,6 +11,9 @@ A parametric staircase, built on its own foundation:
 - Two parallel foundation beams (default a 4×12cm bearer, 5m long), already
   installed flat at ground level, spaced apart (default 100cm centre-to-centre)
   and centred on the origin — these are the footing for the stair, not a deck.
+- A flush joist layer resting flat on top of the foundation beams, evenly
+  spaced along their length (count is a parameter) — these don't climb, they're
+  a separate, level layer from the steps below.
 - One continuous rising structure climbing along the beams' length, sharing
   uniform risers throughout, but split into two different things: a real
   staircase in the middle (small-tread steps, count is a parameter) for

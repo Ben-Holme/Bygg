@@ -30,6 +30,11 @@ const params = {
     height: 12, // cross-section height, cm (120mm)
     length: 5000, // beam length, mm
   },
+  joists: {
+    count: 5, // number of flush crossing beams, evenly spaced along the foundation length
+    width: 4, // cross-section width (along the foundation length), cm
+    height: 9, // cross-section height, cm
+  },
   steps: {
     smallCount: 4, // number of small-tread steps in the middle section
     width: 4, // tread-support cross-section width (along X), cm
@@ -96,6 +101,7 @@ group.rotation.y = Math.PI / 2; // rotate the whole staircase 90° about the ver
 scene.add(group);
 
 const foundationMaterial = new THREE.MeshStandardMaterial({ color: 0xb08a5c, roughness: 0.8, metalness: 0.0 });
+const joistMaterial = new THREE.MeshStandardMaterial({ color: 0xe8d5b0, roughness: 0.8, metalness: 0.0 });
 const stairMaterial = new THREE.MeshStandardMaterial({ color: 0xd9b789, roughness: 0.8, metalness: 0.0 });
 const seatMaterial = new THREE.MeshStandardMaterial({ color: 0xa8674a, roughness: 0.8, metalness: 0.0 });
 const postMaterial = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.6, metalness: 0.2 });
@@ -156,6 +162,21 @@ function rebuild() {
   dimLine.computeLineDistances();
   group.add(dimLine);
 
+  // Joists: their own flush layer, resting flat on top of the foundation beams (unlike
+  // the steps below, these don't climb) — evenly spaced along X, spanning the full width
+  // between the beams' outer edges. Edge joists sit flush with the foundation ends.
+  const jw = params.joists.width * 10;
+  const jh = params.joists.height * 10;
+  const jCount = Math.max(1, Math.round(params.joists.count));
+  const joistSpan = spacing + fw;
+  const joistStep = jCount > 1 ? (fl - jw) / (jCount - 1) : 0;
+  for (let i = 0; i < jCount; i++) {
+    const x = jCount === 1 ? 0 : -fl / 2 + jw / 2 + i * joistStep;
+    const joist = makeBox(jw, jh, joistSpan, joistMaterial);
+    joist.position.set(x, fh + jh / 2, 0);
+    group.add(joist);
+  }
+
   // Steps: tread-support beams spanning across (Z) between the two foundation beams,
   // climbing from +X toward -X. Only the small-tread middle section is a real staircase;
   // the two large-tread groups (2 steps each, flanking it) are wide sitting platforms,
@@ -206,6 +227,14 @@ function rebuild() {
     const lengthLabel = makeLabel(`foundation ${fmt(fl)} (${params.foundation.width}×${params.foundation.height} cm) ×2`);
     lengthLabel.position.set(0, fh + 14, -spacing / 2 - fw / 2 - 6);
     group.add(lengthLabel);
+
+    const joistText =
+      jCount > 1
+        ? `${jCount} joists (${params.joists.width}×${params.joists.height} cm), ${fmt(joistStep)} apart`
+        : `${jCount} joist (${params.joists.width}×${params.joists.height} cm)`;
+    const joistLabel = makeLabel(joistText);
+    joistLabel.position.set(0, fh + jh + 10, -spacing / 2 - fw / 2 - 6 - 24);
+    group.add(joistLabel);
 
     // Middle stair section spans indices [2, 2+smallCount); flanking seat clusters are [0,2) and [end-2,end).
     const stairFrom = stepX[2];
@@ -275,6 +304,11 @@ const foundationFolder = gui.addFolder("Foundation (beams)");
 foundationFolder.add(params.foundation, "width", 1, 40, 1).name("width (cm)").onChange(rebuild);
 foundationFolder.add(params.foundation, "height", 1, 40, 1).name("height (cm)").onChange(rebuild);
 foundationFolder.add(params.foundation, "length", 100, 20000, 10).name("length (mm)").onChange(rebuild);
+
+const joistsFolder = gui.addFolder("Joists (flush layer)");
+joistsFolder.add(params.joists, "count", 1, 40, 1).name("count").onChange(rebuild);
+joistsFolder.add(params.joists, "width", 1, 20, 1).name("width (cm)").onChange(rebuild);
+joistsFolder.add(params.joists, "height", 1, 30, 1).name("height (cm)").onChange(rebuild);
 
 const stepsFolder = gui.addFolder("Steps");
 stepsFolder.add(params.steps, "totalHeight", 100, 3000, 10).name("total height (mm)").onChange(rebuild);
