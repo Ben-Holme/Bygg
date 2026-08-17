@@ -14,9 +14,11 @@ import "./style.css";
  */
 /*
  * The two foundation beams are already installed in the ground — they're the
- * footing for this staircase (not a deck), so they stay at ground level. The
- * stair climbs along X, on top of them: each "step" is a tread-support beam
- * spanning across (Z) from one foundation beam to the other, sitting higher
+ * footing for this structure (not a deck), so they stay at ground level. On
+ * top of them, climbing along X, is one continuous rising structure: a real
+ * staircase (small treads) in the middle, flanked by two wide sitting
+ * platforms (large treads, 2 steps each side). Every tread-support beam
+ * spans across (Z) from one foundation beam to the other, sitting higher
  * than the last by one riser, held up by a construction post at each end.
  */
 const params = {
@@ -94,7 +96,8 @@ group.rotation.y = Math.PI / 2; // rotate the whole staircase 90° about the ver
 scene.add(group);
 
 const foundationMaterial = new THREE.MeshStandardMaterial({ color: 0xb08a5c, roughness: 0.8, metalness: 0.0 });
-const stepMaterial = new THREE.MeshStandardMaterial({ color: 0xd9b789, roughness: 0.8, metalness: 0.0 });
+const stairMaterial = new THREE.MeshStandardMaterial({ color: 0xd9b789, roughness: 0.8, metalness: 0.0 });
+const seatMaterial = new THREE.MeshStandardMaterial({ color: 0xa8674a, roughness: 0.8, metalness: 0.0 });
 const postMaterial = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.6, metalness: 0.2 });
 const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x0a0d10 });
 const dimensionMaterial = new THREE.LineDashedMaterial({ color: 0xf5c451, dashSize: 20, gapSize: 12 });
@@ -154,9 +157,10 @@ function rebuild() {
   group.add(dimLine);
 
   // Steps: tread-support beams spanning across (Z) between the two foundation beams,
-  // climbing from +X toward -X. Two large-tread steps, then the small-tread middle
-  // section, then two more large-tread steps — symmetric, equal risers (code requires
-  // uniform risers; "large" vs "small" only changes tread depth, i.e. step spacing).
+  // climbing from +X toward -X. Only the small-tread middle section is a real staircase;
+  // the two large-tread groups (2 steps each, flanking it) are wide sitting platforms,
+  // not a walking flight — so all 8 still share one uniform riser (they're one continuous
+  // rising structure), but they're rendered and labelled as two different things.
   const sw = params.steps.width * 10;
   const sh = params.steps.height * 10;
   const smallCount = Math.max(1, Math.round(params.steps.smallCount));
@@ -169,13 +173,16 @@ function rebuild() {
   const treadDepths = [largeTread, largeTread, ...Array(smallCount).fill(smallTread), largeTread, largeTread];
   const stepCount = treadDepths.length;
   const riser = totalHeight / stepCount;
+  const isSeat = (i) => i < 2 || i >= stepCount - 2; // the two flanking large-tread groups
 
   let cumX = fl / 2; // steps climb from one end of the foundation beams (x = +fl/2) toward -X
+  const stepX = []; // centre X of every step, in build order
   for (let i = 0; i < stepCount; i++) {
     cumX -= treadDepths[i];
+    stepX.push(cumX);
     const stepY = (i + 1) * riser; // riser 1 at the first step, up to totalHeight at the last
 
-    const tread = makeBox(sw, sh, stepSpan, stepMaterial);
+    const tread = makeBox(sw, sh, stepSpan, isSeat(i) ? seatMaterial : stairMaterial);
     tread.position.set(cumX, stepY + sh / 2, 0);
     group.add(tread);
 
@@ -200,11 +207,24 @@ function rebuild() {
     lengthLabel.position.set(0, fh + 14, -spacing / 2 - fw / 2 - 6);
     group.add(lengthLabel);
 
-    const stepLabel = makeLabel(
-      `${stepCount} steps (2 large + ${smallCount} small + 2 large), ${fmt(riser)} rise each, ${fmt(totalHeight)} total`
-    );
-    stepLabel.position.set(0, totalHeight + 30, spacing / 2 + fw / 2 + 6);
-    group.add(stepLabel);
+    // Middle stair section spans indices [2, 2+smallCount); flanking seat clusters are [0,2) and [end-2,end).
+    const stairFrom = stepX[2];
+    const stairTo = stepX[2 + smallCount - 1];
+    const stairLabel = makeLabel(`stairs: ${smallCount} steps, ${fmt(riser)} rise each, ${fmt(totalHeight)} total`);
+    stairLabel.position.set((stairFrom + stairTo) / 2, totalHeight + 30, spacing / 2 + fw / 2 + 6);
+    group.add(stairLabel);
+
+    const seatNearFrom = stepX[0];
+    const seatNearTo = stepX[1];
+    const seatNearLabel = makeLabel(`seating (2 steps)`);
+    seatNearLabel.position.set((seatNearFrom + seatNearTo) / 2, riser * 2 + 20, spacing / 2 + fw / 2 + 6);
+    group.add(seatNearLabel);
+
+    const seatFarFrom = stepX[stepCount - 2];
+    const seatFarTo = stepX[stepCount - 1];
+    const seatFarLabel = makeLabel(`seating (2 steps)`);
+    seatFarLabel.position.set((seatFarFrom + seatFarTo) / 2, totalHeight + 30, spacing / 2 + fw / 2 + 6);
+    group.add(seatFarLabel);
 
     const runLabel = makeLabel(`run ${fmt(runLength)}`);
     runLabel.position.set(fl / 2 - runLength / 2, 6, -spacing / 2 - fw / 2 - 30);
