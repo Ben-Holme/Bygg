@@ -12,19 +12,32 @@ import "./style.css";
  * derived from `params`, so changing a value in the panel recalculates
  * every location and distance in the scene.
  */
+/*
+ * The two foundation beams are already installed in the ground — they're the
+ * footing for this staircase (not a deck), so they stay at ground level. The
+ * stair climbs along X, on top of them: each "step" is a tread-support beam
+ * spanning across (Z) from one foundation beam to the other, sitting higher
+ * than the last by one riser, held up by a construction post at each end.
+ */
 const params = {
   layout: {
-    spacing: 1000, // centre-to-centre distance between the two parallel beams, mm (100cm)
+    spacing: 1000, // centre-to-centre distance between the two foundation beams, mm (100cm) — also the stair width
   },
   foundation: {
     width: 4, // cross-section width, cm (40mm)
     height: 12, // cross-section height, cm (120mm)
     length: 5000, // beam length, mm
   },
-  joists: {
-    count: 5, // number of crossing beams, evenly spaced along the foundation length
-    width: 4, // cross-section width (along the foundation length), cm
-    height: 9, // cross-section height, cm
+  steps: {
+    smallCount: 4, // number of small-tread steps in the middle section
+    width: 4, // tread-support cross-section width (along X), cm
+    height: 9, // tread-support cross-section height, cm
+    largeTread: 28, // tread depth (X) of each of the 4 large steps — 2 at the bottom, 2 at the top, cm
+    smallTread: 15, // tread depth (X) of each small step in the middle section, cm
+    totalHeight: 900, // total rise from the foundation top to the top step, mm
+  },
+  posts: {
+    size: 9, // square construction-post cross-section, cm — one under each end of every step
   },
   view: {
     grid: true,
@@ -80,7 +93,8 @@ const group = new THREE.Group();
 scene.add(group);
 
 const foundationMaterial = new THREE.MeshStandardMaterial({ color: 0xb08a5c, roughness: 0.8, metalness: 0.0 });
-const joistMaterial = new THREE.MeshStandardMaterial({ color: 0xd9b789, roughness: 0.8, metalness: 0.0 });
+const stepMaterial = new THREE.MeshStandardMaterial({ color: 0xd9b789, roughness: 0.8, metalness: 0.0 });
+const postMaterial = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.6, metalness: 0.2 });
 const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x0a0d10 });
 const dimensionMaterial = new THREE.LineDashedMaterial({ color: 0xf5c451, dashSize: 20, gapSize: 12 });
 
@@ -121,7 +135,8 @@ function rebuild() {
   const fh = params.foundation.height * 10;
   const fl = params.foundation.length;
 
-  // Two foundation beams, running along X, parallel and centred on the origin along Z.
+  // Two foundation beams, already installed in the ground — they stay flat at ground
+  // level and run along X, parallel and centred on the origin along Z.
   const beamA = makeBox(fl, fh, fw, foundationMaterial);
   beamA.position.set(0, fh / 2, -spacing / 2);
   const beamB = makeBox(fl, fh, fw, foundationMaterial);
@@ -137,21 +152,43 @@ function rebuild() {
   dimLine.computeLineDistances();
   group.add(dimLine);
 
-  // Joists: crossing beams running perpendicular (along Z), evenly spaced along the
-  // foundation length (X) and resting flush on top of the foundation beams (y = fh).
-  const jw = params.joists.width * 10;
-  const jh = params.joists.height * 10;
-  const jCount = Math.max(1, Math.round(params.joists.count));
-  const joistSpan = spacing + fw; // reaches the outer edge of both foundation beams
-  // Edge joists sit flush with the foundation ends (outer face aligned, not centred on the end).
-  const joistStep = jCount > 1 ? (fl - jw) / (jCount - 1) : 0;
+  // Steps: tread-support beams spanning across (Z) between the two foundation beams,
+  // climbing from +X toward -X. Two large-tread steps, then the small-tread middle
+  // section, then two more large-tread steps — symmetric, equal risers (code requires
+  // uniform risers; "large" vs "small" only changes tread depth, i.e. step spacing).
+  const sw = params.steps.width * 10;
+  const sh = params.steps.height * 10;
+  const smallCount = Math.max(1, Math.round(params.steps.smallCount));
+  const largeTread = params.steps.largeTread * 10;
+  const smallTread = params.steps.smallTread * 10;
+  const totalHeight = params.steps.totalHeight;
+  const stepSpan = spacing + fw; // reaches the outer edge of both foundation beams
+  const postSize = params.posts.size * 10;
 
-  for (let i = 0; i < jCount; i++) {
-    const x = jCount === 1 ? 0 : -fl / 2 + jw / 2 + i * joistStep;
-    const joist = makeBox(jw, jh, joistSpan, joistMaterial);
-    joist.position.set(x, fh + jh / 2, 0);
-    group.add(joist);
+  const treadDepths = [largeTread, largeTread, ...Array(smallCount).fill(smallTread), largeTread, largeTread];
+  const stepCount = treadDepths.length;
+  const riser = totalHeight / stepCount;
+
+  let cumX = fl / 2; // steps climb from one end of the foundation beams (x = +fl/2) toward -X
+  for (let i = 0; i < stepCount; i++) {
+    cumX -= treadDepths[i];
+    const stepY = (i + 1) * riser; // riser 1 at the first step, up to totalHeight at the last
+
+    const tread = makeBox(sw, sh, stepSpan, stepMaterial);
+    tread.position.set(cumX, stepY + sh / 2, 0);
+    group.add(tread);
+
+    // Construction post at each end, carrying this step's load down to the foundation top.
+    const postHeight = stepY - fh;
+    if (postHeight > 1) {
+      for (const z of [-spacing / 2, spacing / 2]) {
+        const post = makeBox(postSize, postHeight, postSize, postMaterial);
+        post.position.set(cumX, fh + postHeight / 2, z);
+        group.add(post);
+      }
+    }
   }
+  const runLength = fl / 2 - cumX; // total horizontal run of the whole flight
 
   if (params.view.labels) {
     const spacingLabel = makeLabel(`spacing ${fmt(spacing)}`);
@@ -162,17 +199,19 @@ function rebuild() {
     lengthLabel.position.set(0, fh + 14, -spacing / 2 - fw / 2 - 6);
     group.add(lengthLabel);
 
-    const joistText =
-      jCount > 1
-        ? `${jCount} joists (${params.joists.width}×${params.joists.height} cm), ${fmt(joistStep)} apart`
-        : `${jCount} joist (${params.joists.width}×${params.joists.height} cm)`;
-    const joistLabel = makeLabel(joistText);
-    joistLabel.position.set(0, fh + jh + 10, spacing / 2 + fw / 2 + 6);
-    group.add(joistLabel);
+    const stepLabel = makeLabel(
+      `${stepCount} steps (2 large + ${smallCount} small + 2 large), ${fmt(riser)} rise each, ${fmt(totalHeight)} total`
+    );
+    stepLabel.position.set(0, totalHeight + 30, spacing / 2 + fw / 2 + 6);
+    group.add(stepLabel);
+
+    const runLabel = makeLabel(`run ${fmt(runLength)}`);
+    runLabel.position.set(fl / 2 - runLength / 2, 6, -spacing / 2 - fw / 2 - 30);
+    group.add(runLabel);
   }
 
   if (params.view.grid) {
-    const gridSize = Math.max(fl * 1.4, spacing * 4, 1000);
+    const gridSize = Math.max(fl * 1.4, spacing * 4, runLength * 2, 1000);
     grid = new THREE.GridHelper(gridSize, Math.round(gridSize / 50), 0x30363f, 0x22262c);
     scene.add(grid);
   }
@@ -216,10 +255,16 @@ foundationFolder.add(params.foundation, "width", 1, 40, 1).name("width (cm)").on
 foundationFolder.add(params.foundation, "height", 1, 40, 1).name("height (cm)").onChange(rebuild);
 foundationFolder.add(params.foundation, "length", 100, 20000, 10).name("length (mm)").onChange(rebuild);
 
-const joistsFolder = gui.addFolder("Joists (crossing beams)");
-joistsFolder.add(params.joists, "count", 1, 40, 1).name("count").onChange(rebuild);
-joistsFolder.add(params.joists, "width", 1, 20, 1).name("width (cm)").onChange(rebuild);
-joistsFolder.add(params.joists, "height", 1, 30, 1).name("height (cm)").onChange(rebuild);
+const stepsFolder = gui.addFolder("Steps");
+stepsFolder.add(params.steps, "totalHeight", 100, 3000, 10).name("total height (mm)").onChange(rebuild);
+stepsFolder.add(params.steps, "smallCount", 1, 12, 1).name("small steps (middle)").onChange(rebuild);
+stepsFolder.add(params.steps, "largeTread", 10, 50, 1).name("large tread depth (cm)").onChange(rebuild);
+stepsFolder.add(params.steps, "smallTread", 5, 40, 1).name("small tread depth (cm)").onChange(rebuild);
+stepsFolder.add(params.steps, "width", 1, 20, 1).name("support width (cm)").onChange(rebuild);
+stepsFolder.add(params.steps, "height", 1, 30, 1).name("support height (cm)").onChange(rebuild);
+
+const postsFolder = gui.addFolder("Posts");
+postsFolder.add(params.posts, "size", 4, 30, 1).name("size (cm)").onChange(rebuild);
 
 const viewFolder = gui.addFolder("View");
 viewFolder.add(params.view, "grid").name("show grid").onChange(rebuild);

@@ -6,13 +6,19 @@ in the on-screen panel.
 
 ## Current scene
 
-- Two parallel foundation beams (default a 120×40mm bearer, 5m long),
-  spaced apart (default 100cm centre-to-centre) and centred on the origin.
-- A layer of joists (crossing beams) on top, running perpendicular to the
-  foundation beams and evenly spaced along their length. The joist count is
-  a parameter; they always sit flush on top of the foundation beams and
-  span the full width between their outer edges.
-- Live dimension labels and a dashed spacing line showing computed distances.
+A parametric staircase, built on its own foundation:
+
+- Two parallel foundation beams (default a 4×12cm bearer, 5m long), already
+  installed flat at ground level, spaced apart (default 100cm centre-to-centre)
+  and centred on the origin — these are the footing for the stair, not a deck.
+- A flight of steps climbing along the beams' length: two large-tread steps,
+  then a small-tread middle section (step count is a parameter), then two
+  more large-tread steps — symmetric, with equal risers across the whole
+  flight (uniform risers are a building-code requirement; "large" vs "small"
+  only changes tread depth). Total rise is a parameter.
+- A construction post at each end of every step, automatically sized to
+  carry that step's load straight down to the foundation beam beneath it.
+- Live dimension labels showing computed spacing, rise, and run.
 - A ground grid for scale reference.
 
 ## Controls
