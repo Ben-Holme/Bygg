@@ -183,15 +183,14 @@ function rebuild() {
   const rightEdgeIndex = midIndex + removedPerSide;
   const stairHalfWidth = joistX[rightEdgeIndex]; // = -joistX[leftEdgeIndex] by symmetry
 
-  // Flush bottom joists (seating): everything outside the stair span. Every joist
-  // inside the span — including the centre one — is now part of the climbing
-  // staircase instead, so none of them stay flush.
+  // Flush bottom joists: every joist gets one, resting directly on the two beams —
+  // outside the stair span this is the seating; inside the span it's the base the
+  // stair posts stand on, so the posts never float above nothing.
   let seatJoistCount = 0;
   for (let i = 0; i < jCount; i++) {
     const inStairSpan = i >= leftEdgeIndex && i <= rightEdgeIndex;
-    if (inStairSpan) continue;
-    seatJoistCount++;
-    const joist = makeBox(jw, jh, spacing + fw, seatMaterial);
+    if (!inStairSpan) seatJoistCount++;
+    const joist = makeBox(jw, jh, spacing + fw, inStairSpan ? stairMaterial : seatMaterial);
     joist.position.set(joistX[i], fh + jh / 2, 0);
     group.add(joist);
   }
