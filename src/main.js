@@ -13,18 +13,17 @@ import "./style.css";
  * every location and distance in the scene.
  */
 /*
- * The two foundation beams are already installed in the ground — they mark
- * the outer edges of this structure (not a deck), so they stay at ground
- * level, running along X (the climbing direction). Across their spacing
- * (Z), the structure is split into three side-by-side flights that each
- * climb independently, in parallel, from the ground to the same total
- * height: a real staircase (small treads) in the middle, flanked by two
- * wide sitting platforms (large treads, 2 steps each) on the outside. Every
- * step is a tread-support beam held up by a construction post at each end.
+ * The two foundation beams are already installed in the ground — they're the
+ * footing for this structure (not a deck), so they stay at ground level. On
+ * top of them, climbing along X, is one continuous rising structure: a real
+ * staircase (small treads) in the middle, flanked by two wide sitting
+ * platforms (large treads, 2 steps each side). Every tread-support beam
+ * spans across (Z) from one foundation beam to the other, sitting higher
+ * than the last by one riser, held up by a construction post at each end.
  */
 const params = {
   layout: {
-    spacing: 1600, // outer edge-to-edge width across all three flights, mm (100cm)
+    spacing: 1000, // centre-to-centre distance between the two foundation beams, mm (100cm) — also the stair width
   },
   foundation: {
     width: 4, // cross-section width, cm (40mm)
@@ -32,13 +31,12 @@ const params = {
     length: 5000, // beam length, mm
   },
   steps: {
-    smallCount: 4, // number of steps in the middle staircase flight
-    smallWidth: 600, // width of the middle staircase flight, mm
+    smallCount: 4, // number of small-tread steps in the middle section
     width: 4, // tread-support cross-section width (along X), cm
     height: 9, // tread-support cross-section height, cm
-    largeTread: 28, // tread depth (X) of each seating step — 2 steps per side, cm
-    smallTread: 15, // tread depth (X) of each staircase step, cm
-    totalHeight: 900, // total rise from the foundation top to the top step, mm — same for every flight
+    largeTread: 28, // tread depth (X) of each of the 4 large steps — 2 at the bottom, 2 at the top, cm
+    smallTread: 15, // tread depth (X) of each small step in the middle section, cm
+    totalHeight: 900, // total rise from the foundation top to the top step, mm
   },
   posts: {
     size: 9, // square construction-post cross-section, cm — one under each end of every step
@@ -158,83 +156,83 @@ function rebuild() {
   dimLine.computeLineDistances();
   group.add(dimLine);
 
-  // Three side-by-side flights across Z, each independently climbing along X (from
-  // +X toward -X) from the ground to the same total height: a real staircase in the
-  // middle, flanked by two wide sitting platforms. Each flight gets a construction
-  // post at both of its own edges, per step — posts don't need to land under the
-  // foundation beams, they just carry their step's load straight to the ground.
+  // Steps: tread-support beams spanning across (Z) between the two foundation beams,
+  // climbing from +X toward -X. Only the small-tread middle section is a real staircase;
+  // the two large-tread groups (2 steps each, flanking it) are wide sitting platforms,
+  // not a walking flight — so all 8 still share one uniform riser (they're one continuous
+  // rising structure), but they're rendered and labelled as two different things.
   const sw = params.steps.width * 10;
   const sh = params.steps.height * 10;
   const smallCount = Math.max(1, Math.round(params.steps.smallCount));
   const largeTread = params.steps.largeTread * 10;
   const smallTread = params.steps.smallTread * 10;
   const totalHeight = params.steps.totalHeight;
+  const stepSpan = spacing + fw; // reaches the outer edge of both foundation beams
   const postSize = params.posts.size * 10;
 
-  const outerZ = spacing / 2 + fw / 2; // outer face of each foundation beam
-  const stairHalfWidth = Math.min(params.steps.smallWidth / 2, outerZ - 100); // keep both seat flights positive-width
-  const flights = [
-    { label: "seating", treadDepth: largeTread, count: 2, zFrom: -outerZ, zTo: -stairHalfWidth, material: seatMaterial },
-    { label: "stairs", treadDepth: smallTread, count: smallCount, zFrom: -stairHalfWidth, zTo: stairHalfWidth, material: stairMaterial },
-    { label: "seating", treadDepth: largeTread, count: 2, zFrom: stairHalfWidth, zTo: outerZ, material: seatMaterial },
-  ];
+  const treadDepths = [largeTread, largeTread, ...Array(smallCount).fill(smallTread), largeTread, largeTread];
+  const stepCount = treadDepths.length;
+  const riser = totalHeight / stepCount;
+  const isSeat = (i) => i < 2 || i >= stepCount - 2; // the two flanking large-tread groups
 
-  let maxRunLength = 0;
-  for (const flight of flights) {
-    const zSpan = flight.zTo - flight.zFrom;
-    const zCenter = (flight.zFrom + flight.zTo) / 2;
-    const riser = totalHeight / flight.count;
+  let cumX = fl / 2; // steps climb from one end of the foundation beams (x = +fl/2) toward -X
+  const stepX = []; // centre X of every step, in build order
+  for (let i = 0; i < stepCount; i++) {
+    cumX -= treadDepths[i];
+    stepX.push(cumX);
+    const stepY = (i + 1) * riser; // riser 1 at the first step, up to totalHeight at the last
 
-    let cumX = fl / 2; // every flight starts climbing from the same end (x = +fl/2) toward -X
-    for (let i = 0; i < flight.count; i++) {
-      cumX -= flight.treadDepth;
-      const stepY = (i + 1) * riser; // riser 1 at the first step, up to totalHeight at the last
+    const tread = makeBox(sw, sh, stepSpan, isSeat(i) ? seatMaterial : stairMaterial);
+    tread.position.set(cumX, stepY + sh / 2, 0);
+    group.add(tread);
 
-      const tread = makeBox(sw, sh, zSpan, flight.material);
-      tread.position.set(cumX, stepY + sh / 2, zCenter);
-      group.add(tread);
-
-      // Construction post at each edge of this flight, carrying the step's load to the ground.
-      const postHeight = Math.max(stepY, 1);
-      for (const z of [flight.zFrom, flight.zTo]) {
+    // Construction post at each end, carrying this step's load down to the foundation top.
+    const postHeight = stepY - fh;
+    if (postHeight > 1) {
+      for (const z of [-spacing / 2, spacing / 2]) {
         const post = makeBox(postSize, postHeight, postSize, postMaterial);
-        post.position.set(cumX, postHeight / 2, z);
+        post.position.set(cumX, fh + postHeight / 2, z);
         group.add(post);
       }
     }
-    maxRunLength = Math.max(maxRunLength, fl / 2 - cumX);
-    flight.riser = riser;
   }
+  const runLength = fl / 2 - cumX; // total horizontal run of the whole flight
 
   if (params.view.labels) {
-    const spacingLabel = makeLabel(`width ${fmt(spacing)}`);
+    const spacingLabel = makeLabel(`spacing ${fmt(spacing)}`);
     spacingLabel.position.set(0, fh + 20, 0);
     group.add(spacingLabel);
 
     const lengthLabel = makeLabel(`foundation ${fmt(fl)} (${params.foundation.width}×${params.foundation.height} cm) ×2`);
-    lengthLabel.position.set(0, fh + 14, -outerZ - 20);
+    lengthLabel.position.set(0, fh + 14, -spacing / 2 - fw / 2 - 6);
     group.add(lengthLabel);
 
-    const stairFlight = flights[1];
-    const stairLabel = makeLabel(
-      `stairs: ${smallCount} steps, ${fmt(stairFlight.riser)} rise each, ${fmt(stairHalfWidth * 2)} wide`
-    );
-    stairLabel.position.set(fl / 2 - 20, totalHeight + 30, 0);
+    // Middle stair section spans indices [2, 2+smallCount); flanking seat clusters are [0,2) and [end-2,end).
+    const stairFrom = stepX[2];
+    const stairTo = stepX[2 + smallCount - 1];
+    const stairLabel = makeLabel(`stairs: ${smallCount} steps, ${fmt(riser)} rise each, ${fmt(totalHeight)} total`);
+    stairLabel.position.set((stairFrom + stairTo) / 2, totalHeight + 30, spacing / 2 + fw / 2 + 6);
     group.add(stairLabel);
 
-    for (const flight of [flights[0], flights[2]]) {
-      const seatLabel = makeLabel(`seating: 2 steps, ${fmt(flight.riser)} rise each`);
-      seatLabel.position.set(fl / 2 - 20, totalHeight + 30, (flight.zFrom + flight.zTo) / 2);
-      group.add(seatLabel);
-    }
+    const seatNearFrom = stepX[0];
+    const seatNearTo = stepX[1];
+    const seatNearLabel = makeLabel(`seating (2 steps)`);
+    seatNearLabel.position.set((seatNearFrom + seatNearTo) / 2, riser * 2 + 20, spacing / 2 + fw / 2 + 6);
+    group.add(seatNearLabel);
 
-    const runLabel = makeLabel(`run (stairs) ${fmt(smallCount * smallTread)}, (seating) ${fmt(2 * largeTread)}`);
-    runLabel.position.set(fl / 2 - maxRunLength / 2, 6, -outerZ - 60);
+    const seatFarFrom = stepX[stepCount - 2];
+    const seatFarTo = stepX[stepCount - 1];
+    const seatFarLabel = makeLabel(`seating (2 steps)`);
+    seatFarLabel.position.set((seatFarFrom + seatFarTo) / 2, totalHeight + 30, spacing / 2 + fw / 2 + 6);
+    group.add(seatFarLabel);
+
+    const runLabel = makeLabel(`run ${fmt(runLength)}`);
+    runLabel.position.set(fl / 2 - runLength / 2, 6, -spacing / 2 - fw / 2 - 30);
     group.add(runLabel);
   }
 
   if (params.view.grid) {
-    const gridSize = Math.max(fl * 1.4, spacing * 3, maxRunLength * 3, 1000);
+    const gridSize = Math.max(fl * 1.4, spacing * 4, runLength * 2, 1000);
     grid = new THREE.GridHelper(gridSize, Math.round(gridSize / 50), 0x30363f, 0x22262c);
     scene.add(grid);
   }
@@ -280,10 +278,9 @@ foundationFolder.add(params.foundation, "length", 100, 20000, 10).name("length (
 
 const stepsFolder = gui.addFolder("Steps");
 stepsFolder.add(params.steps, "totalHeight", 100, 3000, 10).name("total height (mm)").onChange(rebuild);
-stepsFolder.add(params.steps, "smallCount", 1, 12, 1).name("stair steps (middle)").onChange(rebuild);
-stepsFolder.add(params.steps, "smallWidth", 200, 4000, 10).name("stair width (mm)").onChange(rebuild);
-stepsFolder.add(params.steps, "smallTread", 5, 40, 1).name("stair tread depth (cm)").onChange(rebuild);
-stepsFolder.add(params.steps, "largeTread", 10, 50, 1).name("seat tread depth (cm)").onChange(rebuild);
+stepsFolder.add(params.steps, "smallCount", 1, 12, 1).name("small steps (middle)").onChange(rebuild);
+stepsFolder.add(params.steps, "largeTread", 10, 50, 1).name("large tread depth (cm)").onChange(rebuild);
+stepsFolder.add(params.steps, "smallTread", 5, 40, 1).name("small tread depth (cm)").onChange(rebuild);
 stepsFolder.add(params.steps, "width", 1, 20, 1).name("support width (cm)").onChange(rebuild);
 stepsFolder.add(params.steps, "height", 1, 30, 1).name("support height (cm)").onChange(rebuild);
 
