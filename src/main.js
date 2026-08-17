@@ -195,10 +195,9 @@ function rebuild() {
     group.add(joist);
   }
 
-  // Fixed 4-step staircase, climbing across Z within the carved-out middle span. The
-  // first step always rests flush on the joist top (no post, no gap — this is what
-  // "resting on the joists" means); each step after that is one riser higher, held up
-  // by posts resting on the two edge joists and the centre joist.
+  // Construction posts for the 4-step staircase, climbing across Z within the
+  // carved-out middle span, resting on the edge and centre joists. The tread boards
+  // themselves are being reworked next — for now this is just the post structure.
   const joistTopY = fh + jh;
   const zStep = (spacing - jw) / (STAIR_STEPS - 1);
   const riser = totalHeight / (STAIR_STEPS - 1); // 3 risers across 4 steps: first is flush, last reaches totalHeight
@@ -206,12 +205,6 @@ function rebuild() {
     const z = -spacing / 2 + jw / 2 + i * zStep;
     const stepBottomY = joistTopY + i * riser; // i = 0 sits flush on the joist top
 
-    const step = makeBox(stairHalfWidth * 2, jh, jw, stairMaterial);
-    step.position.set(0, stepBottomY + jh / 2, z);
-    group.add(step);
-
-    // Construction posts resting on the edge and centre joists, carrying this step's
-    // load down to the joist top.
     const postHeight = stepBottomY - joistTopY;
     if (postHeight > 1) {
       for (const x of [-stairHalfWidth, 0, stairHalfWidth]) {
