@@ -17,8 +17,8 @@ const params = {
     spacing: 1000, // centre-to-centre distance between the two parallel beams, mm (100cm)
   },
   foundation: {
-    width: 12, // cross-section width, cm (120mm)
-    height: 4, // cross-section height, cm (40mm)
+    width: 4, // cross-section width, cm (40mm)
+    height: 12, // cross-section height, cm (120mm)
     length: 5000, // beam length, mm
   },
   joists: {
