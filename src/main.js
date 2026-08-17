@@ -220,11 +220,13 @@ function rebuild() {
 
       // Step 0 sits flush on the joist top, so its beam would just duplicate the
       // flush joist already there — skip it. The beam matches the posts' square
-      // cross-section, and is extended half a post-width past each post's centre so
-      // its ends land flush with the posts' outer edges instead of stopping mid-post.
+      // cross-section. Trailing end extends half a post-width past the trailing
+      // post's centre to land on its outer edge; the leading end is pulled back a
+      // full post-width to land on the (offset) leading post's outer edge instead
+      // of overshooting past it.
       if (i > 0) {
-        const beam = makeBox(postSize, postSize, zStep + postSize, stairMaterial);
-        beam.position.set(x, stepTopY - postSize / 2, zTrailing + zStep / 2);
+        const beam = makeBox(postSize, postSize, zStep, stairMaterial);
+        beam.position.set(x, stepTopY - postSize / 2, zTrailing + zStep / 2 - postSize / 2);
         group.add(beam);
       }
 
