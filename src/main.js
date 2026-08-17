@@ -186,23 +186,27 @@ function rebuild() {
     group.add(joist);
   }
 
-  // Fixed 4-step staircase, climbing across Z within the carved-out middle span.
+  // Fixed 4-step staircase, climbing across Z within the carved-out middle span. The
+  // first step always rests flush on the joist top (no post, no gap — this is what
+  // "resting on the joists" means); each step after that is one riser higher, held up
+  // by a post from the joist top.
+  const joistTopY = fh + jh;
   const zStep = (spacing - jw) / (STAIR_STEPS - 1);
-  const riser = totalHeight / STAIR_STEPS;
+  const riser = totalHeight / (STAIR_STEPS - 1); // 3 risers across 4 steps: first is flush, last reaches totalHeight
   for (let i = 0; i < STAIR_STEPS; i++) {
     const z = -spacing / 2 + jw / 2 + i * zStep;
-    const stepY = (i + 1) * riser; // riser 1 at the first step, up to totalHeight at the last
+    const stepBottomY = joistTopY + i * riser; // i = 0 sits flush on the joist top
 
     const step = makeBox(stairHalfWidth * 2, jh, jw, stairMaterial);
-    step.position.set(0, stepY + jh / 2, z);
+    step.position.set(0, stepBottomY + jh / 2, z);
     group.add(step);
 
-    // Construction post at each end, carrying this step's load down to the foundation top.
-    const postHeight = stepY - fh;
+    // Construction post at each end, carrying this step's load down to the joist top.
+    const postHeight = stepBottomY - joistTopY;
     if (postHeight > 1) {
       for (const x of [-stairHalfWidth, stairHalfWidth]) {
         const post = makeBox(postSize, postHeight, postSize, postMaterial);
-        post.position.set(x, fh + postHeight / 2, z);
+        post.position.set(x, joistTopY + postHeight / 2, z);
         group.add(post);
       }
     }
@@ -220,7 +224,7 @@ function rebuild() {
     const stairLabel = makeLabel(
       `stairs: ${STAIR_STEPS} steps, ${fmt(riser)} rise each, ${stairSpan} joist bays (${fmt(stairHalfWidth * 2)}) wide`
     );
-    stairLabel.position.set(0, totalHeight + 30, spacing / 2 + fw / 2 + 6);
+    stairLabel.position.set(0, joistTopY + totalHeight + 30, spacing / 2 + fw / 2 + 6);
     group.add(stairLabel);
 
     const seatLabel = makeLabel(`seating: ${seatJoistCount} joists, ${fmt(joistPitch)} apart`);
