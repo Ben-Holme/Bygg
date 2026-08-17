@@ -143,10 +143,11 @@ function rebuild() {
   const jh = params.joists.height * 10;
   const jCount = Math.max(1, Math.round(params.joists.count));
   const joistSpan = spacing + fw; // reaches the outer edge of both foundation beams
-  const joistStep = jCount > 1 ? fl / (jCount - 1) : 0;
+  // Edge joists sit flush with the foundation ends (outer face aligned, not centred on the end).
+  const joistStep = jCount > 1 ? (fl - jw) / (jCount - 1) : 0;
 
   for (let i = 0; i < jCount; i++) {
-    const x = jCount === 1 ? 0 : -fl / 2 + i * joistStep;
+    const x = jCount === 1 ? 0 : -fl / 2 + jw / 2 + i * joistStep;
     const joist = makeBox(jw, jh, joistSpan, joistMaterial);
     joist.position.set(x, fh + jh / 2, 0);
     group.add(joist);
