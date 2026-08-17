@@ -185,12 +185,16 @@ function rebuild() {
 
   // Flush bottom joists: every joist gets one, resting directly on the two beams —
   // outside the stair span this is the seating; inside the span it's the base the
-  // stair posts stand on, so the posts never float above nothing.
+  // stair posts stand on, so the posts never float above nothing. Rendered at least as
+  // wide as a post, so a post never overhangs past the joist's edges underneath it —
+  // joist spacing/pitch still uses the true joist width (jw), only the rendered board
+  // is widened.
+  const joistRenderWidth = Math.max(jw, postSize);
   let seatJoistCount = 0;
   for (let i = 0; i < jCount; i++) {
     const inStairSpan = i >= leftEdgeIndex && i <= rightEdgeIndex;
     if (!inStairSpan) seatJoistCount++;
-    const joist = makeBox(jw, jh, spacing + fw, seatMaterial);
+    const joist = makeBox(joistRenderWidth, jh, spacing + fw, seatMaterial);
     joist.position.set(joistX[i], fh + jh / 2, 0);
     group.add(joist);
   }
