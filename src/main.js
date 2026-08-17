@@ -13,9 +13,8 @@ import "./style.css";
  * every location and distance in the scene.
  */
 const params = {
-  posts: {
-    spacing: 1000, // distance between the two post cubes, mm (100cm)
-    size: 200, // cube edge length, mm
+  layout: {
+    spacing: 1000, // centre-to-centre distance between the two parallel beams, mm (100cm)
   },
   foundation: {
     width: 12, // cross-section width, cm (120mm)
@@ -75,9 +74,9 @@ let grid = null;
 const group = new THREE.Group();
 scene.add(group);
 
-const postMaterial = new THREE.MeshStandardMaterial({ color: 0x4f8ff0, roughness: 0.5, metalness: 0.1 });
 const foundationMaterial = new THREE.MeshStandardMaterial({ color: 0xb08a5c, roughness: 0.8, metalness: 0.0 });
 const edgeMaterial = new THREE.LineBasicMaterial({ color: 0x0a0d10 });
+const dimensionMaterial = new THREE.LineDashedMaterial({ color: 0xf5c451, dashSize: 20, gapSize: 12 });
 
 function makeBox(width, height, depth, material) {
   const geometry = new THREE.BoxGeometry(width, height, depth);
@@ -110,31 +109,35 @@ function rebuild() {
     grid = null;
   }
 
-  const { spacing, size } = params.posts;
+  const { spacing } = params.layout;
   // Cross-section is entered in cm (trade shorthand, e.g. "12x4" = 120x40mm); convert to mm.
   const fw = params.foundation.width * 10;
   const fh = params.foundation.height * 10;
   const fl = params.foundation.length;
 
-  // Post cubes: centred on the origin along X, sitting on the ground (y = 0).
-  const postA = makeBox(size, size, size, postMaterial);
-  postA.position.set(-spacing / 2, size / 2, 0);
-  const postB = makeBox(size, size, size, postMaterial);
-  postB.position.set(spacing / 2, size / 2, 0);
-  group.add(postA, postB);
+  // Two foundation beams, running along X, parallel and centred on the origin along Z.
+  const beamA = makeBox(fl, fh, fw, foundationMaterial);
+  beamA.position.set(0, fh / 2, -spacing / 2);
+  const beamB = makeBox(fl, fh, fw, foundationMaterial);
+  beamB.position.set(0, fh / 2, spacing / 2);
+  group.add(beamA, beamB);
 
-  // Foundation beam: centred on the origin, running along X, resting on the ground.
-  const foundation = makeBox(fl, fh, fw, foundationMaterial);
-  foundation.position.set(0, fh / 2, 0);
-  group.add(foundation);
+  // Dimension line showing the centre-to-centre spacing between the two beams.
+  const dimGeometry = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(0, fh + 20, -spacing / 2),
+    new THREE.Vector3(0, fh + 20, spacing / 2),
+  ]);
+  const dimLine = new THREE.Line(dimGeometry, dimensionMaterial);
+  dimLine.computeLineDistances();
+  group.add(dimLine);
 
   if (params.view.labels) {
     const spacingLabel = makeLabel(`spacing ${fmt(spacing)}`);
-    spacingLabel.position.set(0, size + 6, 0);
+    spacingLabel.position.set(0, fh + 20, 0);
     group.add(spacingLabel);
 
-    const lengthLabel = makeLabel(`foundation ${fmt(fl)} (${params.foundation.width}×${params.foundation.height} cm)`);
-    lengthLabel.position.set(0, fh + 14, fw / 2 + 6);
+    const lengthLabel = makeLabel(`foundation ${fmt(fl)} (${params.foundation.width}×${params.foundation.height} cm) ×2`);
+    lengthLabel.position.set(0, fh + 14, -spacing / 2 - fw / 2 - 6);
     group.add(lengthLabel);
   }
 
@@ -175,11 +178,10 @@ rebuild();
 // ---------- Parameter panel (togglable) ----------
 const gui = new GUI({ title: "Parameters" });
 
-const postsFolder = gui.addFolder("Posts (cubes)");
-postsFolder.add(params.posts, "spacing", 100, 20000, 10).name("spacing (mm)").onChange(rebuild);
-postsFolder.add(params.posts, "size", 50, 1000, 10).name("cube size (mm)").onChange(rebuild);
+const layoutFolder = gui.addFolder("Layout");
+layoutFolder.add(params.layout, "spacing", 100, 20000, 10).name("beam spacing (mm)").onChange(rebuild);
 
-const foundationFolder = gui.addFolder("Foundation (beam)");
+const foundationFolder = gui.addFolder("Foundation (beams)");
 foundationFolder.add(params.foundation, "width", 1, 40, 1).name("width (cm)").onChange(rebuild);
 foundationFolder.add(params.foundation, "height", 1, 40, 1).name("height (cm)").onChange(rebuild);
 foundationFolder.add(params.foundation, "length", 100, 20000, 10).name("length (mm)").onChange(rebuild);

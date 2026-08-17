@@ -6,9 +6,9 @@ in the on-screen panel.
 
 ## Current scene
 
-- Two post cubes, spaced apart (default 100cm) and centred on the origin.
-- A foundation beam (default a 120×40mm bearer, 5m long) resting on the ground.
-- Live dimension labels showing computed spacing/length.
+- Two parallel foundation beams (default a 120×40mm bearer, 5m long),
+  spaced apart (default 100cm centre-to-centre) and centred on the origin.
+- Live dimension labels and a dashed spacing line showing computed distances.
 - A ground grid for scale reference.
 
 ## Controls
