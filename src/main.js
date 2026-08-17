@@ -203,8 +203,11 @@ function rebuild() {
   // (where the next riser starts). The leading post is set back half a post-width so it
   // sits right next to next step's trailing post instead of overlapping it.
   const joistTopY = fh + jh;
-  const zStep = (spacing - jw) / (STAIR_STEPS - 1);
-  const riser = totalHeight / (STAIR_STEPS - 1); // 3 risers across 4 steps: first is flush, last reaches totalHeight
+  // zStep tiles the run into STAIR_STEPS equal tread depths (so the last tread's
+  // leading edge lands exactly at the far beam, not one zStep past it); riser divides
+  // the STAIR_STEPS-1 gaps between the 4 walking-surface heights (joist, 1, 2, 3).
+  const zStep = (spacing - jw) / STAIR_STEPS;
+  const riser = totalHeight / (STAIR_STEPS - 1);
   for (let i = 0; i < STAIR_STEPS; i++) {
     const zTrailing = -spacing / 2 + jw / 2 + i * zStep;
     const zLeading = zTrailing + zStep; // the end pointing in the walking direction
