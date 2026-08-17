@@ -90,6 +90,7 @@ scene.add(sun);
 
 let grid = null;
 const group = new THREE.Group();
+group.rotation.y = Math.PI / 2; // rotate the whole staircase 90° about the vertical axis
 scene.add(group);
 
 const foundationMaterial = new THREE.MeshStandardMaterial({ color: 0xb08a5c, roughness: 0.8, metalness: 0.0 });
