@@ -158,38 +158,47 @@ function rebuild() {
   group.add(dimLine);
 
   // Bottom joists: a flush grid spanning the full width, evenly spaced along X and
-  // resting directly on the two beams (no posts needed — this is the seating). A fixed
-  // 4-step staircase is cut into the middle, spanning some number of these joist bays
-  // (variable width); the bottom joists that would fall inside that span are skipped,
-  // since the stair steps stand there instead, climbing across Z.
+  // resting directly on the two beams (no posts needed — this is the seating). The
+  // count is always odd, so a joist always sits exactly at the centre (X = 0) — that
+  // centre joist stays in place even though the stair sits above it, so there's always
+  // a real joist for a middle support post to rest on, not just the two edge posts.
   const jw = params.joists.width * 10;
   const jh = params.joists.height * 10;
   const totalHeight = params.joists.totalHeight;
   const postSize = params.posts.size * 10;
   const STAIR_STEPS = 4; // always 4 steps in the middle section
 
-  const jCount = Math.max(STAIR_STEPS + 2, Math.round(params.joists.count));
+  let jCount = Math.max(STAIR_STEPS + 3, Math.round(params.joists.count));
+  if (jCount % 2 === 0) jCount++; // force odd so a joist always lands exactly at the centre
   const joistPitch = (fl - jw) / (jCount - 1);
   const joistX = [];
   for (let i = 0; i < jCount; i++) joistX.push(-fl / 2 + jw / 2 + i * joistPitch);
+  const midIndex = (jCount - 1) / 2;
 
-  const stairSpan = Math.max(1, Math.min(Math.round(params.joists.stairSpan), jCount - 2));
-  const stairHalfWidth = (stairSpan * joistPitch) / 2; // centred on X = 0
+  // Stair span is measured in removed joist-bays per side (the centre joist is kept as
+  // a middle support, not counted as removed). The two edge posts land exactly on the
+  // nearest joist positions still standing just outside the span.
+  const removedPerSide = Math.max(1, Math.min(Math.round(params.joists.stairSpan), midIndex - 1));
+  const leftEdgeIndex = midIndex - removedPerSide;
+  const rightEdgeIndex = midIndex + removedPerSide;
+  const stairHalfWidth = joistX[rightEdgeIndex]; // = -joistX[leftEdgeIndex] by symmetry
 
-  // Flush bottom joists (seating), skipping the carved-out middle stair span.
+  // Flush bottom joists (seating): everything outside the stair span, plus the centre
+  // joist (kept as the stair's middle support even though it sits under the treads).
   let seatJoistCount = 0;
-  for (const x of joistX) {
-    if (Math.abs(x) < stairHalfWidth) continue;
+  for (let i = 0; i < jCount; i++) {
+    const inStairSpan = i > leftEdgeIndex && i < rightEdgeIndex && i !== midIndex;
+    if (inStairSpan) continue;
     seatJoistCount++;
     const joist = makeBox(jw, jh, spacing + fw, seatMaterial);
-    joist.position.set(x, fh + jh / 2, 0);
+    joist.position.set(joistX[i], fh + jh / 2, 0);
     group.add(joist);
   }
 
   // Fixed 4-step staircase, climbing across Z within the carved-out middle span. The
   // first step always rests flush on the joist top (no post, no gap — this is what
   // "resting on the joists" means); each step after that is one riser higher, held up
-  // by a post from the joist top.
+  // by posts resting on the two edge joists and the centre joist.
   const joistTopY = fh + jh;
   const zStep = (spacing - jw) / (STAIR_STEPS - 1);
   const riser = totalHeight / (STAIR_STEPS - 1); // 3 risers across 4 steps: first is flush, last reaches totalHeight
@@ -201,10 +210,11 @@ function rebuild() {
     step.position.set(0, stepBottomY + jh / 2, z);
     group.add(step);
 
-    // Construction post at each end, carrying this step's load down to the joist top.
+    // Construction posts resting on the edge and centre joists, carrying this step's
+    // load down to the joist top.
     const postHeight = stepBottomY - joistTopY;
     if (postHeight > 1) {
-      for (const x of [-stairHalfWidth, stairHalfWidth]) {
+      for (const x of [-stairHalfWidth, 0, stairHalfWidth]) {
         const post = makeBox(postSize, postHeight, postSize, postMaterial);
         post.position.set(x, joistTopY + postHeight / 2, z);
         group.add(post);
@@ -222,7 +232,7 @@ function rebuild() {
     group.add(lengthLabel);
 
     const stairLabel = makeLabel(
-      `stairs: ${STAIR_STEPS} steps, ${fmt(riser)} rise each, ${stairSpan} joist bays (${fmt(stairHalfWidth * 2)}) wide`
+      `stairs: ${STAIR_STEPS} steps, ${fmt(riser)} rise each, ${removedPerSide * 2} joist bays (${fmt(stairHalfWidth * 2)}) wide`
     );
     stairLabel.position.set(0, joistTopY + totalHeight + 30, spacing / 2 + fw / 2 + 6);
     group.add(stairLabel);
